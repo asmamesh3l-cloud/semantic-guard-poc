@@ -51,7 +51,7 @@
 
 2. التثبيت
 
-git clone [https://github.com/semantic-pioneers/semantic-guard-poc.git](https://github.com/semantic-pioneers/semantic-guard-poc.git)
+git clone [https://github.com/asmamesh3l-clod/semantic-guard-poc.git](https://github.com/asmamesh3l-clod/semantic-guard-poc.git)
 cd semantic-guard-poc
 pip install -r requirements.txt
 
