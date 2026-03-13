@@ -2,7 +2,7 @@
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from typing import Dict, Any
-from engine import SemanticGuardEngine
+from .engine import SemanticGuardEngine
 import uvicorn
 
 # إنشاء تطبيق FastAPI ليكون حلقة الوصل بين الاستمارة ومحرك الذكاء الاصطناعي
@@ -57,3 +57,4 @@ def validate_record(request: RecordRequest):
 if __name__ == "__main__":
     # تشغيل الخادم على المنفذ 8000
     uvicorn.run(app, host="127.0.0.1", port=8000)
+
