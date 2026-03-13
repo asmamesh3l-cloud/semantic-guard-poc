@@ -1,7 +1,0 @@
-fastapi
-uvicorn
-openai
-streamlit
-python-dotenv
-requests
-pydantic
