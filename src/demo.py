@@ -5,7 +5,11 @@ from openai import OpenAI
 from dotenv import load_dotenv
 
 # 1. إعدادات الصفحة والتحميل
-st.set_page_config(page_title="الحارس الدلالي - Demo", layout="wide")
+st.set_page_config(
+    page_title="الحارس الدلالي - Demo", 
+    layout="wide", 
+    page_icon="🛡️"
+)
 load_dotenv()
 
 # 2. شريط جانبي لإعدادات المفتاح (Sidebar)
@@ -15,7 +19,7 @@ with st.sidebar:
     
     # محاولة جلب المفتاح من الملفات أولاً
     default_key = st.secrets.get("API_KEY") or os.getenv("API_KEY", "")
-    if default_key == "1111": default_key = "" # تصفير الكود التجريبي للبدء بمفتاح جديد
+    if default_key == "1111": default_key = "" 
     
     user_api_key = st.text_input(
         "أدخل مفتاح OpenAI API (اختياري):", 
@@ -36,15 +40,11 @@ with st.sidebar:
 # 3. وظيفة المحرك الذكي (دعم وضع العرض بدون مفتاح)
 def get_ai_validation(record_data, api_key_input):
     """تحليل البيانات مع دعم وضع المحاكاة أو الاتصال الفعلي"""
-    
-    # الأولوية للمفتاح المدخل في الواجهة، ثم الملفات
     api_key = api_key_input or st.secrets.get("API_KEY") or os.getenv("API_KEY")
-
-    # التحقق مما إذا كان المستخدم يرغب في "وضع العرض التجريبي"
     is_demo_mode = not api_key or api_key in ["1111", "DEMO", ""]
 
     if is_demo_mode:
-        # منطق محاكاة للأخطاء المشهورة لتوضيح الفكرة بدون API
+        # منطق محاكاة للأخطاء المشهورة
         age = record_data.get("العمر", 0)
         job = record_data.get("المهنة", "")
         exp = record_data.get("سنوات_الخبرة", 0)
@@ -59,15 +59,10 @@ def get_ai_validation(record_data, api_key_input):
         
         return {"score": 0.95, "reasoning": "محاكاة: البيانات تبدو منطقية وسليمة بناءً على الفحص الأولي."}
 
-    # إذا كان هناك مفتاح حقيقي، يتم استدعاء OpenAI
+    # استدعاء OpenAI الحقيقي
     client = OpenAI(api_key=api_key)
     record_json = json.dumps(record_data)
-
-    prompt = f"""
-    أنت خبير في تدقيق جودة البيانات الإحصائية. حلل السجل التالي بناءً على المنطق البشري والترابط السياقي.
-    السجل المطلوب فحصه: {record_json}
-    يجب أن يكون الرد بصيغة JSON فقط يحتوي على score و reasoning بالعربية.
-    """
+    prompt = f"أنت خبير في تدقيق جودة البيانات. حلل السجل التالي وأجب بـ JSON (score, reasoning): {record_json}"
 
     try:
         response = client.chat.completions.create(
@@ -79,18 +74,39 @@ def get_ai_validation(record_data, api_key_input):
     except Exception as e:
         return {"score": 0, "reasoning": f"حدث خطأ أثناء الاتصال بالذكاء الاصطناعي: {str(e)}"}
 
-# 4. واجهة المستخدم (Streamlit UI)
+# 4. الواجهة الرسومية (UI Design)
+# العنوان الرئيسي
 st.title("🛡️ الحارس الدلالي (Semantic Guard)")
-st.subheader("نظام التدقيق المنطقي اللحظي المدعوم بالذكاء الاصطناعي")
+st.subheader("نظام الذكاء الاصطناعي للتدقيق المنطقي والارتقاء بجودة البيانات اللحظية")
 
-# تنبيه للمستخدم حول وضع التشغيل
+# قسم نظرة عامة (Overview)
+with st.container():
+    st.markdown("### 🌟 نظرة عامة (Overview)")
+    st.write(
+        "الحارس الدلالي هو نموذج أولي (POC) لمساعد ذكي لجودة البيانات. "
+        "يتميز بقدرته على الانتقال من **'التحقق الرقمي'** إلى **'الإدراك المنطقي'**، "
+        "حيث يستخدم الذكاء الاصطناعي لرصد التناقضات السياقية (مثل تعارض المهنة مع السن) "
+        "لحظياً أثناء جمع البيانات الميدانية."
+    )
+
+# قسم التشغيل السريع (Quick Start)
+with st.expander("🚀 التشغيل السريع (Quick Start) - اضغط هنا"):
+    st.markdown("""
+    1. **تعبئة البيانات:** أدخل القيم في الحقول أدناه (العمر، المهنة، المؤهل).
+    2. **تفعيل الذكاء الاصطناعي:** أدخل مفتاح OpenAI الخاص بك في الشريط الجانبي (يسار الصفحة).
+    3. **التحقق:** اضغط على زر 'تحقق من المنطق الدلالي' لمشاهدة تحليل النظام.
+    """)
+
+st.markdown("---")
+
+# تنبيه وضع التشغيل
 if not user_api_key or user_api_key in ["1111", "DEMO"]:
-    st.warning("⚠️ يعمل النظام الآن في 'وضع العرض التجريبي' (بدون مفتاح API حقيقي). أدخلي مفتاحك في الشريط الجانبي لتفعيل الذكاء الاصطناعي.")
+    st.warning("⚠️ يعمل النظام الآن في **وضع العرض التجريبي** (Simulation).")
 else:
-    st.success("✨ النظام متصل الآن بمحرك الذكاء الاصطناعي (OpenAI) بنجاح.")
+    st.success("✨ النظام متصل الآن بمحرك الذكاء الاصطناعي الفعلي.")
 
+# مدخلات البيانات
 col1, col2 = st.columns(2)
-
 with col1:
     age = st.number_input("العمر", min_value=1, max_value=120, value=10)
     job = st.text_input("المسمى الوظيفي", value="طيار مدني")
@@ -106,6 +122,7 @@ record_to_test = {
     "سنوات_الخبرة": exp_years
 }
 
+# زر التحقق
 if st.button("تحقق من المنطق الدلالي فوراً"):
     with st.spinner('جاري الاستدلال المنطقي...'):
         result = get_ai_validation(record_to_test, user_api_key)
@@ -119,5 +136,5 @@ if st.button("تحقق من المنطق الدلالي فوراً"):
             st.error(f"⚠️ تنبيه منطقي! (درجة الثقة: {int(score*100)}%)")
             st.warning(f"**السبب:** {result.get('reasoning')}")
 
-with st.expander("معاينة البيانات المرسلة (JSON)"):
+with st.expander("🔍 معاينة البيانات المرسلة (JSON)"):
     st.json(record_to_test)
