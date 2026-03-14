@@ -71,7 +71,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# 3. محرك الحارس الدلالي الشامل
+# 3. محرك الحارس الدلالي 
 def semantic_validation_engine(data, mode, api_key):
     """
     محرك شامل لتحليل الترابط بين العمر، المؤهل، المهنة، والخبرة.
@@ -169,7 +169,7 @@ with st.sidebar:
 
 # 5. الصفحة الأولى: فحص السجلات
 if app_page == "🔍 فحص السجلات الميدانية":
-    st.markdown('<h1 class="main-title">🛡️ االحارس الدلالي الشامل</h1>', unsafe_allow_html=True)
+    st.markdown('<h1 class="main-title">🛡️ االحارس الدلالي </h1>', unsafe_allow_html=True)
     st.markdown('<p class="sub-title">نظام ذكي لمطابقة المهن، الأعمار، المؤهلات، والخبرات لحظياً</p>', unsafe_allow_html=True)
 
     with st.container():
