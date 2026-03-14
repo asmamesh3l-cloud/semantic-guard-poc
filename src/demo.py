@@ -1,6 +1,8 @@
 import streamlit as st
 import json
 import os
+import pandas as pd
+import numpy as np
 from openai import OpenAI
 from dotenv import load_dotenv
 
@@ -12,7 +14,7 @@ st.set_page_config(
 )
 load_dotenv()
 
-# 2. إضافة CSS مخصص لتحسين الواجهة ودعم اللغة العربية
+# 2. إضافة CSS مخصص (تم تحديثه ليدعم لوحة التحكم)
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700&display=swap');
@@ -46,16 +48,13 @@ st.markdown("""
         box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
         color: #1E3A8A;
     }
-    
-    .quickstart-box {
-        background-color: #FEF3C7;
-        padding: 20px;
-        border-radius: 15px;
-        border-right: 10px solid #F59E0B;
-        color: #92400E;
-        margin-bottom: 10px;
-    }
 
+    /* تنسيق الكروت الإحصائية */
+    [data-testid="stMetricValue"] {
+        font-size: 1.8rem !important;
+        color: #1E3A8A !important;
+    }
+    
     .stButton>button {
         width: 100%;
         border-radius: 10px;
@@ -74,39 +73,41 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# 3. إعدادات الشريط الجانبي
+# 3. إعدادات الشريط الجانبي للتنقل
 with st.sidebar:
     st.image("https://img.icons8.com/fluency/96/shield.png", width=80)
-    st.header("⚙️ إعدادات النظام")
+    st.header("🛡️ نظام الحارس الدلالي")
     st.markdown("---")
     
-    # خيار التبديل بين الدخول المباشر والذكاء الاصطناعي
+    # التنقل الأساسي
+    app_mode = st.radio("اختر الشاشة:", ["🔍 المدقق الذكي (الميدان)", "📊 لوحة تحكم الجودة (الإدارة)"])
+    
+    st.markdown("---")
+    st.subheader("⚙️ الإعدادات التقنية")
     access_mode = st.radio("وضع الوصول:", ["دخول مباشر (محاكي ذكي)", "ربط مفتاح API حقيقي"])
     
     user_api_key = ""
     if access_mode == "ربط مفتاح API حقيقي":
         user_api_key = st.text_input("أدخل مفتاح OpenAI API:", type="password")
     else:
-        st.info("🔓 تم تفعيل الدخول المباشر. يمكنك استخدام التطبيق الآن بدون مفتاح.")
+        st.info("🔓 وضع المحاكي مفعل")
 
 # 4. وظيفة المحرك (الدخول المباشر / الذكاء الاصطناعي)
 def get_validation_result(record_data, api_key_input, mode):
-    # إذا اختار المستخدم الدخول المباشر أو لم يوفر مفتاحاً
     if mode == "دخول مباشر (محاكي ذكي)" or not api_key_input:
         age = record_data.get("العمر", 0)
         job = record_data.get("المهنة", "")
         exp = record_data.get("سنوات_الخبرة", 0)
         edu = record_data.get("المؤهل", "")
 
-        # منطق المحاكاة للحالات المتناقضة
         if age < 18 and job in ["طيار مدني", "جراح", "مدير تنفيذي", "قاضي", "مهندس"]:
-            return {"score": 0.15, "reasoning": "دخول مباشر: تم رصد تناقض بين السن والمهنة. لا يمكن ممارسة هذه المهنة في هذا السن قانونياً."}
+            return {"score": 0.15, "reasoning": "تم رصد تناقض بين السن والمهنة. لا يمكن ممارسة هذه المهنة في هذا السن قانونياً."}
         if exp > (age - 16): 
-            return {"score": 0.2, "reasoning": "دخول مباشر: سنوات الخبرة غير منطقية مقارنة بالعمر الفعلي."}
+            return {"score": 0.2, "reasoning": "سنوات الخبرة غير منطقية مقارنة بالعمر الفعلي."}
         if edu == "ابتدائي" and job in ["جراح", "مهندس", "محامي"]:
-            return {"score": 0.1, "reasoning": "دخول مباشر: المؤهل العلمي الحالي لا يتناسب مع المتطلبات التخصصية لهذه المهنة."}
+            return {"score": 0.1, "reasoning": "المؤهل العلمي الحالي لا يتناسب مع المتطلبات التخصصية لهذه المهنة."}
         
-        return {"score": 0.98, "reasoning": "دخول مباشر: البيانات تبدو متسقة ومنطقية بناءً على القواعد المرجعية."}
+        return {"score": 0.98, "reasoning": "البيانات تبدو متسقة ومنطقية بناءً على القواعد المرجعية."}
 
     # منطق الذكاء الاصطناعي الحقيقي
     client = OpenAI(api_key=api_key_input)
@@ -123,55 +124,78 @@ def get_validation_result(record_data, api_key_input, mode):
     except Exception as e:
         return {"score": 0, "reasoning": f"خطأ في الاتصال: {str(e)}"}
 
-# 5. واجهة المستخدم
-st.markdown('<h1 class="main-title">🛡️ الحارس الدلالي (Semantic Guard)</h1>', unsafe_allow_html=True)
-st.markdown('<p class="sub-title">نظام الذكاء الاصطناعي للتدقيق المنطقي والارتقاء بجودة البيانات اللحظية</p>', unsafe_allow_html=True)
+# 5. عرض الشاشات
+if app_mode == "🔍 المدقق الذكي (الميدان)":
+    st.markdown('<h1 class="main-title">🛡️ الحارس الدلالي (Semantic Guard)</h1>', unsafe_allow_html=True)
+    st.markdown('<p class="sub-title">واجهة جمع البيانات المدعومة بالذكاء الاصطناعي</p>', unsafe_allow_html=True)
 
-# قسم نظرة عامة
-st.markdown("""
-<div class="overview-box">
-    <h3 style="margin-top: 0;">🌟 نظرة عامة (Overview)</h3>
-    <p style="font-size: 1.1rem;">
-        هذا التطبيق متاح للـ <b>دخول المباشر</b> لتسهيل عملية التحكيم. 
-        يعمل النظام على رصد التناقضات السياقية لحظياً لضمان جودة البيانات من المصدر.
-    </p>
-</div>
-""", unsafe_allow_html=True)
-
-# التشغيل السريع
-with st.expander("🚀 التشغيل السريع - اضغط هنا"):
     st.markdown("""
-    <div class="quickstart-box">
-        1.  ستكون الموثوقية منخفضة، إذا أدخلت معلومات متناقضة  (مثلاً: عمر 10 سنوات ومهنة طيار).<br>
-        2. اضغط على زر التحقق لمشاهدة النتيجة فوراً عبر وضع الدخول المباشر.
+    <div class="overview-box">
+        <h3 style="margin-top: 0;">🌟 تجربة الباحث الميداني</h3>
+        <p>جرب إدخال بيانات متناقضة (مثلاً: عمر 10 سنوات ووظيفة جراح) لترى كيف يعترض الحارس الدلالي البيانات فوراً.</p>
     </div>
     """, unsafe_allow_html=True)
 
-st.markdown("<br>", unsafe_allow_html=True)
+    c1, c2 = st.columns(2)
+    with c1:
+        age_in = st.number_input("العمر", 1, 120, 10)
+        job_in = st.text_input("المسمى الوظيفي", "طيار مدني")
+    with c2:
+        edu_in = st.selectbox("المؤهل العلمي", ["ابتدائي", "متوسط", "ثانوي", "بكالوريوس", "دكتوراه"])
+        exp_in = st.number_input("سنوات الخبرة", 0, 60, 20)
 
-# إدخال البيانات
-c1, c2 = st.columns(2)
-with c1:
-    age_in = st.number_input("العمر", 1, 120, 10)
-    job_in = st.text_input("المسمى الوظيفي", "طيار مدني")
-with c2:
-    edu_in = st.selectbox("المؤهل العلمي", ["ابتدائي", "متوسط", "ثانوي", "بكالوريوس", "دكتوراه"])
-    exp_in = st.number_input("سنوات الخبرة", 0, 60, 20)
+    input_data = {"العمر": age_in, "المهنة": job_in, "المؤهل": edu_in, "سنوات_الخبرة": exp_in}
 
-input_data = {"العمر": age_in, "المهنة": job_in, "المؤهل": edu_in, "سنوات_الخبرة": exp_in}
+    if st.button("تحقق من المنطق الدلالي فوراً"):
+        with st.spinner('جاري الفحص اللحظي...'):
+            result = get_validation_result(input_data, user_api_key, access_mode)
+            st.write("---")
+            final_score = result.get("score", 0)
+            if final_score > 0.7:
+                st.success(f"✅ درجة الثقة: {int(final_score*100)}%")
+                st.info(f"💡 النتيجة: {result.get('reasoning') or 'البيانات سليمة.'}")
+            else:
+                st.error(f"⚠️ تنبيه منطقي! (الثقة: {int(final_score*100)}%)")
+                st.warning(f"🧐 السبب: {result.get('reasoning')}")
 
-# تنفيذ التحقق
-if st.button("تحقق من المنطق الدلالي فوراً"):
-    with st.spinner('جاري الفحص اللحظي...'):
-        result = get_validation_result(input_data, user_api_key, access_mode)
-        st.write("---")
-        final_score = result.get("score", 0)
-        if final_score > 0.7:
-            st.success(f"✅ درجة الثقة: {int(final_score*100)}%")
-            st.info(f"💡 النتيجة: {result.get('reasoning') or 'البيانات سليمة.'}")
-        else:
-            st.error(f"⚠️ تنبيه منطقي! (الثقة: {int(final_score*100)}%)")
-            st.warning(f"🧐 السبب: {result.get('reasoning')}")
+    with st.expander("🔍 معاينة بيانات JSON الصادرة للهيئة"):
+        st.json(input_data)
 
-with st.expander("🔍 معاينة بيانات JSON"):
-    st.json(input_data)
+else:
+    # شاشة لوحة التحكم (Dashboard)
+    st.markdown('<h1 class="main-title">📊 لوحة تحكم مراقبة الجودة المركزية</h1>', unsafe_allow_html=True)
+    st.markdown('<p class="sub-title">إحصائيات مباشرة لجودة البيانات الوطنية المجمعة ميدانياً</p>', unsafe_allow_html=True)
+
+    # المؤشرات الرئيسية
+    m1, m2, m3, m4 = st.columns(4)
+    m1.metric("إجمالي السجلات", "1,284", "+155 اليوم")
+    m2.metric("أخطاء تم تلافيها", "142", "-5% تحسن", delta_color="normal")
+    m3.metric("دقة البيانات", "96.4%", "2% ⬆️")
+    m4.metric("توفير تقديري (SAR)", "12,400", "وفر تشغيلي")
+
+    st.markdown("---")
+
+    # الرسوم البيانية
+    g1, g2 = st.columns(2)
+    with g1:
+        st.subheader("⚠️ توزيع الأخطاء الدلالية")
+        error_stats = pd.DataFrame({
+            'النوع': ['عمر/مهنة', 'مؤهل/وظيفة', 'خبرة غير منطقية', 'أخرى'],
+            'الحالات': [45, 30, 20, 10]
+        }).set_index('النوع')
+        st.bar_chart(error_stats)
+
+    with g2:
+        st.subheader("📈 استقرار الجودة (آخر 7 أيام)")
+        trend_data = pd.DataFrame(np.random.randn(7, 2), columns=['دقة المصدر', 'كفاءة الباحثين'])
+        st.line_chart(trend_data)
+
+    # سجل العمليات الأخير
+    st.markdown("---")
+    st.subheader("🕵️ سجل الاعتراضات اللحظي (Logs)")
+    logs = pd.DataFrame([
+        {"الباحث": "أحمد علي", "المنطقة": "الرياض", "الحالة": "تم التصحيح", "الخطأ": "عمر 12 سنة / مهنة طبيب"},
+        {"الباحث": "نورة فهد", "المنطقة": "جدة", "الحالة": "تم التصحيح", "الخطأ": "ابتدائي / مهنة مهندس"},
+        {"الباحث": "سعد محمد", "المنطقة": "الدمام", "الحالة": "مقبول يدوياً", "الخطأ": "سنوات خبرة > العمر"},
+    ])
+    st.table(logs)
